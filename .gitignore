@@ -21,3 +21,4 @@ scratch/
 # IDE files
 .vscode/
 .idea/
+pytest-cache-files-*
