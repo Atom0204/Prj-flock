@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Urja Meter Operations | Fleet Gateway</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Chart.js for energy analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Leaflet for interactive geospatial map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    :root {
+      --bg-dark: #0a0e17;
+      --card-bg: rgba(18, 24, 38, 0.85);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-hover: rgba(255, 255, 255, 0.12);
+      --primary: #3b82f6;
+      --primary-glow: rgba(59, 130, 246, 0.35);
+      --accent: #10b981;
+      --accent-glow: rgba(16, 185, 129, 0.3);
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 15% 10%, rgba(59, 130, 246, 0.08), transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.06), transparent 30%),
+        radial-gradient(circle at 50% 90%, rgba(99, 102, 241, 0.05), transparent 35%);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      backdrop-filter: blur(16px);
+      background: rgba(10, 14, 23, 0.75);
+      border-bottom: 1px solid var(--card-border);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      padding: 0.85rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #3b82f6, #10b981);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      box-shadow: 0 0 15px var(--primary-glow);
+    }
+
+    .brand-title {
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-subtitle {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 0.5rem;
+      background: rgba(255, 255, 255, 0.04);
+      padding: 0.3rem;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      color: #34d399;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.35rem 0.75rem;
+      border-radius: 20px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #10b981;
+    }
+
+    .api-link-btn {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1px solid var(--card-border);
+      padding: 0.4rem 0.8rem;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .api-link-btn:hover {
+      color: var(--text-main);
+      border-color: var(--primary);
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    main {
+      flex: 1;
+      padding: 2rem;
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .tab-pane {
+      display: none;
+      animation: fadeIn 0.25s ease forwards;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+    }
+
+    .stat-title {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-dim);
+      font-weight: 700;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-top: 0.35rem;
+      color: var(--text-main);
+    }
+
+    .stat-footer {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Search & Filter Bar */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      margin-bottom: 1.25rem;
+    }
+
+    .search-box {
+      flex: 1;
+      min-width: 280px;
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 0.75rem 1rem 0.75rem 2.6rem;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.9rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      font-size: 1rem;
+    }
+
+    .select-filter {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .select-filter:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .btn-sync {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #60a5fa;
+      padding: 0.75rem 1.25rem;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn-sync:hover {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 0 15px var(--primary-glow);
+    }
+
+    /* Table */
+    .table-responsive {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.88rem;
+    }
+
+    thead th {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 0.9rem 1.2rem;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-dim);
+      border-bottom: 1px solid var(--card-border);
+      font-weight: 700;
+    }
+
+    tbody td {
+      padding: 0.9rem 1.2rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+    }
+
+    tbody tr {
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    tbody tr:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .meter-id-cell {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: #60a5fa;
+    }
+
+    .serial-cell {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-main);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-installed {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-faulty {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .badge-decommissioned {
+      background: rgba(148, 163, 184, 0.15);
+      color: #94a3b8;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
+    .badge-phase {
+      background: rgba(99, 102, 241, 0.15);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+
+    /* Pagination */
+    .pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 1.25rem;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+    }
+
+    .pagination-controls {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .page-btn {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 0.45rem 0.9rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+
+    .page-btn:hover:not(:disabled) {
+      color: var(--text-main);
+      border-color: var(--primary);
+    }
+
+    .page-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    /* Modal / Drawer */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-container {
+      background: #111827;
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      max-width: 900px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      position: relative;
+    }
+
+    .modal-header {
+      padding: 1.5rem 1.75rem;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: rgba(17, 24, 39, 0.95);
+      backdrop-filter: blur(8px);
+      z-index: 10;
+    }
+
+    .modal-close {
+      background: rgba(255, 255, 255, 0.05);
+      border: none;
+      color: var(--text-muted);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.2rem;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+    }
+
+    .modal-body {
+      padding: 1.75rem;
+    }
+
+    .breadcrumb {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      margin-bottom: 1.25rem;
+    }
+
+    .breadcrumb-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .breadcrumb-tag {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 0.2rem 0.5rem;
+      border-radius: 5px;
+      color: var(--text-muted);
+    }
+
+    .meter-specs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .spec-item {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 0.9rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .spec-label {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .spec-value {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-top: 0.25rem;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .chart-container {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-top: 1.5rem;
+      height: 280px;
+    }
+
+    /* Hierarchy Tree View */
+    .tree-container {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 1.5rem;
+    }
+
+    .tree-node {
+      margin-left: 1.25rem;
+      border-left: 2px dashed rgba(255, 255, 255, 0.1);
+      padding-left: 0.75rem;
+      margin-top: 0.4rem;
+    }
+
+    .tree-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s ease;
+    }
+
+    .tree-header:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tree-level-badge {
+      font-size: 0.68rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .lvl-zone { background: #818cf8; color: #1e1b4b; }
+    .lvl-circle { background: #38bdf8; color: #082f49; }
+    .lvl-division { background: #34d399; color: #022c22; }
+    .lvl-subdivision { background: #fbbf24; color: #451a03; }
+    .lvl-substation { background: #f472b6; color: #500724; }
+    .lvl-feeder { background: #a78bfa; color: #2e1065; }
+    .lvl-dt { background: #fb923c; color: #431407; }
+
+    #map {
+      height: 520px;
+      border-radius: 14px;
+      border: 1px solid var(--card-border);
+      z-index: 10;
+    }
+
+    .leaflet-popup-content-wrapper {
+      background: #1e293b !important;
+      color: #fff !important;
+      border-radius: 10px !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    .leaflet-popup-tip {
+      background: #1e293b !important;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <div>
+        <div class="brand-title">Urja Meter Ops</div>
+        <div class="brand-subtitle">Smart Meter Fleet Gateway</div>
+      </div>
+    </div>
+
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('fleet')">📊 Fleet</button>
+      <button class="tab-btn" onclick="switchTab('meters')">⚡ Meters</button>
+      <button class="tab-btn" onclick="switchTab('hierarchy')">🌳 Hierarchy</button>
+      <button class="tab-btn" onclick="switchTab('map')">📍 Map View</button>
+    </div>
+
+    <div class="header-actions">
+      <div class="status-badge" id="service-health">
+        <div class="status-dot"></div>
+        <span>Connected</span>
+      </div>
+      <a href="/docs" target="_blank" class="api-link-btn">Swagger UI</a>
+      <a href="/scalar" target="_blank" class="api-link-btn">Scalar Docs</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- Tab 1: Fleet Overview -->
+    <div id="tab-fleet" class="tab-pane active">
+      <div class="stats-grid">
+        <div class="card stat-card">
+          <div class="stat-title">Total Smart Meters</div>
+          <div class="stat-value" id="stat-total-meters">-</div>
+          <div class="stat-footer">Live in distribution grid</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-title">Distribution Transformers</div>
+          <div class="stat-value" id="stat-total-dts">-</div>
+          <div class="stat-footer">Monitored DT units</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-title">Installed & Active</div>
+          <div class="stat-value" style="color: #34d399;" id="stat-installed">-</div>
+          <div class="stat-footer">Reporting telemetry</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-title">Flagged Faulty</div>
+          <div class="stat-value" style="color: #fbbf24;" id="stat-faulty">-</div>
+          <div class="stat-footer">Requires field investigation</div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem;">
+        <div class="card">
+          <h3 style="margin-bottom: 1rem; font-size: 1rem;">Manufacturer Breakdown</h3>
+          <div style="height: 240px;">
+            <canvas id="chart-makes"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="margin-bottom: 1rem; font-size: 1rem;">Status Distribution</h3>
+          <div style="height: 240px;">
+            <canvas id="chart-status"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Meters Directory -->
+    <div id="tab-meters" class="tab-pane">
+      <div class="card">
+        <div class="filter-bar">
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="search-input" class="search-input" placeholder="Search by meter ID, serial, make, or DT code..." oninput="handleSearch()">
+          </div>
+          <select id="filter-make" class="select-filter" onchange="applyFilters()">
+            <option value="">All Makes</option>
+            <option value="HPL">HPL</option>
+            <option value="Secure">Secure</option>
+            <option value="Genus">Genus</option>
+            <option value="L&T">L&T</option>
+            <option value="Allied">Allied</option>
+          </select>
+          <select id="filter-status" class="select-filter" onchange="applyFilters()">
+            <option value="">All Statuses</option>
+            <option value="Installed">Installed</option>
+            <option value="Faulty">Faulty</option>
+            <option value="Decommissioned">Decommissioned</option>
+          </select>
+          <select id="filter-phase" class="select-filter" onchange="applyFilters()">
+            <option value="">All Phases</option>
+            <option value="single">Single Phase</option>
+            <option value="three">Three Phase</option>
+          </select>
+          <button class="btn-sync" onclick="syncData()">
+            <span>🔄</span> Sync Portal
+          </button>
+        </div>
+
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Meter ID</th>
+                <th>Serial No</th>
+                <th>Make</th>
+                <th>Phase</th>
+                <th>Status</th>
+                <th>Type</th>
+                <th>DT Code</th>
+                <th>Build</th>
+              </tr>
+            </thead>
+            <tbody id="meters-tbody">
+              <tr>
+                <td colspan="8" style="text-align: center; padding: 2rem;">Loading smart meters...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination">
+          <div id="pagination-info">Showing page 1</div>
+          <div class="pagination-controls">
+            <button id="prev-page-btn" class="page-btn" onclick="changePage(-1)" disabled>Previous</button>
+            <button id="next-page-btn" class="page-btn" onclick="changePage(1)">Next</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3: Hierarchy Tree -->
+    <div id="tab-hierarchy" class="tab-pane">
+      <div class="card">
+        <h2 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem;">Network Distribution Hierarchy</h2>
+        <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1.5rem;">
+          Reconstructed 7-tier utility distribution tree from regional Zone down to individual Distribution Transformers (DT) and connected meters.
+        </p>
+        <div id="hierarchy-container" class="tree-container">
+          Loading hierarchy...
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 4: Map View -->
+    <div id="tab-map" class="tab-pane">
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <div>
+            <h2 style="font-size: 1.2rem; font-weight: 700;">Spatial Fleet Map</h2>
+            <p style="font-size: 0.85rem; color: var(--text-dim);">Geographic coordinate mapping of meters in the Jaipur utility area.</p>
+          </div>
+          <button class="btn-sync" onclick="loadMapMeters()">Refresh Map Pins</button>
+        </div>
+        <div id="map"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Meter Detail Modal -->
+  <div id="meter-modal" class="modal-overlay" onclick="closeModalOnBg(event)">
+    <div class="modal-container">
+      <div class="modal-header">
+        <div>
+          <h2 id="modal-meter-id" style="font-size: 1.35rem; font-family: 'JetBrains Mono', monospace; font-weight: 700;">-</h2>
+          <div id="modal-serial" style="font-size: 0.85rem; color: var(--text-muted);">-</div>
+        </div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="modal-breadcrumbs" class="breadcrumb"></div>
+
+        <div class="meter-specs-grid" id="modal-specs"></div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+          <h3 style="font-size: 1rem; font-weight: 700;">Recent Consumption & Voltage (30-min Intervals)</h3>
+          <span id="modal-energy-summary" style="font-size: 0.8rem; color: #34d399; font-weight: 600;"></span>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="chart-energy"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentPage = 1;
+    let totalPages = 1;
+    let searchDebounceTimer = null;
+    let energyChart = null;
+    let makesChart = null;
+    let statusChart = null;
+    let leafletMap = null;
+    let mapMarkers = [];
+
+    async function init() {
+      await loadFleetStats();
+      await loadMeters();
+      await loadHierarchy();
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+      
+      const tabIdx = ['fleet', 'meters', 'hierarchy', 'map'].indexOf(tab);
+      document.querySelectorAll('.tab-btn')[tabIdx].classList.add('active');
+      document.getElementById(`tab-${tab}`).classList.add('active');
+
+      if (tab === 'map') {
+        setTimeout(initMap, 200);
+      }
+    }
+
+    async function loadFleetStats() {
+      try {
+        const res = await fetch('/api/v1/stats');
+        const data = await res.json();
+        
+        document.getElementById('stat-total-meters').innerText = data.total_meters;
+        document.getElementById('stat-total-dts').innerText = data.total_transformers;
+        document.getElementById('stat-installed').innerText = data.by_status.Installed || 0;
+        document.getElementById('stat-faulty').innerText = data.by_status.Faulty || 0;
+
+        renderFleetCharts(data);
+      } catch (err) {
+        console.error("Stats load failed:", err);
+      }
+    }
+
+    function renderFleetCharts(data) {
+      // Makes Chart
+      const makesCtx = document.getElementById('chart-makes').getContext('2d');
+      if (makesChart) makesChart.destroy();
+      makesChart = new Chart(makesCtx, {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(data.by_make),
+          datasets: [{
+            data: Object.values(data.by_make),
+            backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans' } } }
+          }
+        }
+      });
+
+      // Status Chart
+      const statusCtx = document.getElementById('chart-status').getContext('2d');
+      if (statusChart) statusChart.destroy();
+      statusChart = new Chart(statusCtx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(data.by_status),
+          datasets: [{
+            label: 'Meters',
+            data: Object.values(data.by_status),
+            backgroundColor: ['#94a3b8', '#10b981', '#f59e0b'],
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+            y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+    }
+
+    async function loadMeters() {
+      const q = document.getElementById('search-input').value.trim();
+      const make = document.getElementById('filter-make').value;
+      const status = document.getElementById('filter-status').value;
+      const phase = document.getElementById('filter-phase').value;
+
+      const params = new URLSearchParams({
+        page: currentPage,
+        page_size: 15
+      });
+      if (q) params.append('q', q);
+      if (make) params.append('make', make);
+      if (status) params.append('status', status);
+      if (phase) params.append('phase', phase);
+
+      const tbody = document.getElementById('meters-tbody');
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem;">Loading...</td></tr>';
+
+      try {
+        const res = await fetch(`/api/v1/meters?${params.toString()}`);
+        const data = await res.json();
+
+        totalPages = data.total_pages;
+        document.getElementById('pagination-info').innerText = `Showing page ${data.page} of ${data.total_pages} (${data.total} total meters)`;
+        document.getElementById('prev-page-btn').disabled = data.page <= 1;
+        document.getElementById('next-page-btn').disabled = data.page >= data.total_pages;
+
+        if (data.items.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: #64748b;">No meters found matching criteria.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.items.map(m => {
+          let badgeClass = 'badge-installed';
+          if (m.installStatus === 'Faulty') badgeClass = 'badge-faulty';
+          else if (m.installStatus === 'Decommissioned') badgeClass = 'badge-decommissioned';
+
+          return `
+            <tr onclick="openMeterDetail('${m.meterId}')">
+              <td class="meter-id-cell">${m.meterId}</td>
+              <td class="serial-cell">${m.serialNo}</td>
+              <td style="font-weight: 500;">${m.make}</td>
+              <td><span class="badge badge-phase">${m.phaseType}</span></td>
+              <td><span class="badge ${badgeClass}">${m.installStatus}</span></td>
+              <td>${m.installType || 'Standard'}</td>
+              <td style="font-family: 'JetBrains Mono';">${m.dtCode || '-'}</td>
+              <td><span style="font-size: 0.75rem; color: #64748b;">${m.build || 'legacy'}</span></td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: #ef4444;">Failed to load meters: ${err.message}</td></tr>`;
+      }
+    }
+
+    function handleSearch() {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(() => {
+        currentPage = 1;
+        loadMeters();
+      }, 250);
+    }
+
+    function applyFilters() {
+      currentPage = 1;
+      loadMeters();
+    }
+
+    function changePage(delta) {
+      currentPage = Math.max(1, Math.min(totalPages, currentPage + delta));
+      loadMeters();
+    }
+
+    async function syncData() {
+      const btn = document.querySelector('.btn-sync');
+      const original = btn.innerHTML;
+      btn.innerHTML = '<span>⏳</span> Syncing...';
+      try {
+        const res = await fetch('/api/v1/sync', { method: 'POST' });
+        const result = await res.json();
+        alert(`Sync complete! ${result.synced_meters} meters in ${result.duration_ms}ms.`);
+        await loadFleetStats();
+        await loadMeters();
+      } catch (err) {
+        alert('Sync failed: ' + err.message);
+      } finally {
+        btn.innerHTML = original;
+      }
+    }
+
+    async function openMeterDetail(meterId) {
+      const modal = document.getElementById('meter-modal');
+      modal.classList.add('open');
+      document.getElementById('modal-meter-id').innerText = meterId;
+      document.getElementById('modal-serial').innerText = 'Loading specifications...';
+      document.getElementById('modal-specs').innerHTML = '<div style="color: #64748b;">Loading meter nameplate...</div>';
+      document.getElementById('modal-breadcrumbs').innerHTML = '';
+      document.getElementById('modal-energy-summary').innerText = '';
+
+      try {
+        const [detailRes, energyRes] = await Promise.all([
+          fetch(`/api/v1/meters/${meterId}`),
+          fetch(`/api/v1/meters/${meterId}/energy?limit=100`)
+        ]);
+
+        const detail = await detailRes.json();
+        const energy = await energyRes.json();
+
+        document.getElementById('modal-serial').innerText = `Serial: ${detail.serialNo} • Make: ${detail.make} • Status: ${detail.installStatus}`;
+
+        // Breadcrumbs
+        const h = detail.hierarchy || {};
+        const steps = [
+          h.zone && `Zone: ${h.zone.name}`,
+          h.circle && `Circle: ${h.circle.name}`,
+          h.division && `Division: ${h.division.name}`,
+          h.subdivision && `Subdivision: ${h.subdivision.name}`,
+          h.feeder && `Feeder: ${h.feeder.name}`,
+          h.dt && `DT: ${h.dt.name}`
+        ].filter(Boolean);
+
+        document.getElementById('modal-breadcrumbs').innerHTML = steps.map(s => 
+          `<span class="breadcrumb-item"><span class="breadcrumb-tag">${s}</span> <span style="color:#475569;">›</span></span>`
+        ).join('');
+
+        // Nameplate specs grid
+        const attrs = detail.nameplate_attributes || {};
+        const specKeys = Object.keys(attrs);
+        document.getElementById('modal-specs').innerHTML = specKeys.map(k => `
+          <div class="spec-item">
+            <div class="spec-label">${k}</div>
+            <div class="spec-value">${attrs[k]}</div>
+          </div>
+        `).join('') + (detail.geo ? `
+          <div class="spec-item">
+            <div class="spec-label">Coordinates</div>
+            <div class="spec-value">${detail.geo.latitude.toFixed(4)}, ${detail.geo.longitude.toFixed(4)}</div>
+          </div>
+        ` : '');
+
+        // Energy analytics
+        if (energy.summary) {
+          document.getElementById('modal-energy-summary').innerText = 
+            `Δ kWh: ${energy.summary.kwh_consumption || 0} kWh • Avg Voltage: ${energy.summary.avg_voltage || '-'} V (${energy.readings_count} intervals)`;
+        }
+
+        renderEnergyChart(energy.readings || []);
+
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function renderEnergyChart(readings) {
+      const ctx = document.getElementById('chart-energy').getContext('2d');
+      if (energyChart) energyChart.destroy();
+
+      const labels = readings.map(r => r.timestamp.split(' ')[1] || r.timestamp);
+      const kwhData = readings.map(r => r.kwh);
+      const voltData = readings.map(r => r.volt_r);
+
+      energyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Active Energy (kWh)',
+              data: kwhData,
+              borderColor: '#3b82f6',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              yAxisID: 'y',
+              tension: 0.2,
+              pointRadius: 1
+            },
+            {
+              label: 'Voltage (V)',
+              data: voltData,
+              borderColor: '#10b981',
+              borderDash: [4, 4],
+              yAxisID: 'y1',
+              tension: 0.1,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          scales: {
+            x: { ticks: { color: '#64748b', maxTicksLimit: 12 }, grid: { display: false } },
+            y: {
+              type: 'linear',
+              position: 'left',
+              title: { display: true, text: 'kWh', color: '#3b82f6' },
+              ticks: { color: '#64748b' },
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            },
+            y1: {
+              type: 'linear',
+              position: 'right',
+              title: { display: true, text: 'Voltage (V)', color: '#10b981' },
+              ticks: { color: '#64748b' },
+              grid: { display: false }
+            }
+          },
+          plugins: {
+            legend: { labels: { color: '#94a3b8' } }
+          }
+        }
+      });
+    }
+
+    function closeModal() {
+      document.getElementById('meter-modal').classList.remove('open');
+    }
+
+    function closeModalOnBg(e) {
+      if (e.target.id === 'meter-modal') closeModal();
+    }
+
+    async function loadHierarchy() {
+      try {
+        const res = await fetch('/api/v1/hierarchy');
+        const nodes = await res.json();
+        const container = document.getElementById('hierarchy-container');
+
+        function renderTree(nodeList) {
+          return nodeList.map(n => `
+            <div class="tree-node">
+              <div class="tree-header">
+                <span class="tree-level-badge lvl-${n.level}">${n.level}</span>
+                <span style="font-weight: 600; font-size: 0.88rem;">${n.name}</span>
+                <span style="font-size: 0.72rem; color: #64748b; font-family: 'JetBrains Mono';">(${n.id})</span>
+                <span style="margin-left: auto; font-size: 0.75rem; background: rgba(255,255,255,0.06); padding: 0.15rem 0.5rem; border-radius: 12px; color: #34d399;">
+                  ${n.meter_count} meters
+                </span>
+              </div>
+              ${n.children && n.children.length > 0 ? renderTree(n.children) : ''}
+            </div>
+          `).join('');
+        }
+
+        container.innerHTML = renderTree(nodes);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function initMap() {
+      if (!leafletMap) {
+        leafletMap = L.map('map').setView([26.9124, 75.7873], 11);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; OpenStreetMap &copy; CARTO',
+          maxZoom: 19
+        }).addTo(leafletMap);
+        loadMapMeters();
+      } else {
+        leafletMap.invalidateSize();
+      }
+    }
+
+    async function loadMapMeters() {
+      try {
+        const res = await fetch('/api/v1/meters?page_size=100');
+        const data = await res.json();
+        
+        mapMarkers.forEach(m => leafletMap.removeLayer(m));
+        mapMarkers = [];
+
+        data.items.forEach(m => {
+          if (m.geo && m.geo.latitude && m.geo.longitude) {
+            const markerColor = m.installStatus === 'Faulty' ? '#f59e0b' : (m.installStatus === 'Installed' ? '#10b981' : '#94a3b8');
+            const circle = L.circleMarker([m.geo.latitude, m.geo.longitude], {
+              radius: 6,
+              fillColor: markerColor,
+              color: '#fff',
+              weight: 1,
+              opacity: 0.8,
+              fillOpacity: 0.8
+            }).addTo(leafletMap);
+
+            circle.bindPopup(`
+              <div style="font-family: sans-serif; font-size: 13px;">
+                <strong style="color: #60a5fa; font-family: monospace;">${m.meterId}</strong> (${m.serialNo})<br>
+                <strong>Make:</strong> ${m.make}<br>
+                <strong>Status:</strong> ${m.installStatus}<br>
+                <strong>DT:</strong> ${m.dtCode || '-'}<br>
+                <button onclick="openMeterDetail('${m.meterId}')" style="margin-top: 6px; background: #3b82f6; border: none; color: #fff; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px;">View Energy & Specs</button>
+              </div>
+            `);
+            mapMarkers.push(circle);
+          }
+        });
+      } catch (err) {
+        console.error("Map meters load failed:", err);
+      }
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
